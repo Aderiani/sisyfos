@@ -64,9 +64,10 @@ const character = {
 const stone = {
     radius: 10,
     rotation: 0,
-    x: 0,
-    y: 0,
-    points: []
+    x: mountain.x + mountain.width / 2,
+    y: mountain.y,
+    points: [],
+    isRollingDown: false
 };
 
 // Generate random points for the stone
@@ -121,9 +122,9 @@ function drawStone() {
     ctx.closePath();
 
     // Fill and stroke the shape
-    ctx.fillStyle = 'brown';
+    ctx.fillStyle = 'gray';
     ctx.fill();
-    ctx.strokeStyle = 'black';
+    ctx.strokeStyle = 'gray';
     ctx.stroke();
 
     // Restore the canvas state
@@ -182,14 +183,23 @@ function updateCharacter() {
 }
 
 function updateStone() {
-    // Move the stone along the mountain
-    stone.x += character.speed;
-    if (stone.x > mountain.x + mountain.width) {
-        stone.x = mountain.x;
+    // If the character is pushing the stone and it's not rolling down
+    if (!stone.isRollingDown && character.x + character.width >= stone.x && character.x <= stone.x + stone.radius * 2) {
+        stone.y -= character.speed;
+        if (stone.y <= mountain.y - mountain.height) {
+            stone.isRollingDown = true; // Stone reaches the top and starts rolling down
+        }
     }
 
-    // Ensure the stone stays on the mountain line
-    stone.y = getMountainY(stone.x) - stone.radius;
+    // Roll the stone down automatically if it's at the peak
+    if (stone.isRollingDown) {
+        stone.x += character.speed;
+        stone.y = getMountainY(stone.x) - stone.radius;
+        if (stone.x >= mountain.x + mountain.width) {
+            stone.isRollingDown = false; // Stop rolling when it reaches the base on the right
+            stone.x = mountain.x + mountain.width - stone.radius; // Position the stone at the base
+        }
+    }
 
     // Rotate the stone
     stone.rotation += 0.1;
