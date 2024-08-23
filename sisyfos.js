@@ -50,26 +50,27 @@ function drawMountain() {
     ctx.fill();
 }
 
+
 const character = {
     x: mountain.x,
     y: mountain.y,
     width: 20,
     height: 40, // Height of the man
     speed: 2,
-    isJumping: false,
+    isPushingUp: false,
     isMovingLeft: false,
     isMovingRight: false
 };
 
 const stone = {
-    radius: 10,
+    radius: 20,
     rotation: 0,
-    x: mountain.x + mountain.width / 2,
-    y: mountain.y,
     points: [],
     isRollingDown: false
 };
 
+stone.x = character.x + stone.radius *2 + character.width/2; // Place the stone next to the character
+stone.y = getMountainY(stone.x) - 4* stone.radius;  // Place the stone on the mountain's surface
 // Generate random points for the stone
 function generateRandomPoints(radius) {
     const points = [];
@@ -144,11 +145,11 @@ function getMountainY(x) {
 }
 
 function updateCharacter() {
-    if (character.isJumping) {
+    if (character.isPushingUp) {
         character.y -= character.speed;
         character.x += character.speed / 2;
         if (character.y <= mountain.y - mountain.height) {
-            character.isJumping = false;
+            character.isPushingUp = false;
         }
     } else {
         character.y += character.speed;
@@ -183,31 +184,48 @@ function updateCharacter() {
 }
 
 function updateStone() {
-    // If the character is pushing the stone and it's not rolling down
-    if (!stone.isRollingDown && character.x + character.width >= stone.x && character.x <= stone.x + stone.radius * 2) {
-        stone.y -= character.speed;
-        if (stone.y <= mountain.y - mountain.height) {
-            stone.isRollingDown = true; // Stone reaches the top and starts rolling down
+    // Stone should only move when character is pushing it
+    const mountainSurfaceY = getMountainY(stone.x) - stone.radius;
+    if (stone.y < mountainSurfaceY) {
+        stone.y = mountainSurfaceY;
+    }
+
+    if (!stone.isRollingDown && character.isPushingUp && stone.x - character.x < stone.radius + character.width  && stone.x > character.x ) {
+        // const newY = stone.y - character.speed;
+        stone.rotation += 0.1;
+        stone.x = character.x + stone.radius + character.width ;
+        stone.y = getMountainY(stone.x) - stone.radius; // Place the stone on the mountain's surface
+        if (stone.x > mountain.x + mountain.width / 2) {
+            stone.isRollingDown = true; // Start rolling down when reaching the peak
         }
     }
 
-    // Roll the stone down automatically if it's at the peak
+    // If the stone starts rolling down automatically
     if (stone.isRollingDown) {
         stone.x += character.speed;
-        stone.y = getMountainY(stone.x) - stone.radius;
+        stone.rotation += 0.1;
+        // Prevent the stone from going inside the mountain
+        if (stone.y < mountainSurfaceY) {
+            stone.y = mountainSurfaceY;
+        } {
+            stone.y += character.speed; // Stone rolls down
+        }
+
         if (stone.x >= mountain.x + mountain.width) {
-            stone.isRollingDown = false; // Stop rolling when it reaches the base on the right
-            stone.x = mountain.x + mountain.width - stone.radius; // Position the stone at the base
+            // Reset the stone to the starting position
+            stone.isRollingDown = false; // Stop rolling
+            stone.x = mountain.x + stone.radius *2; // Place the stone next to the character
+            stone.y = getMountainY(stone.x) - stone.radius; // Ensure it rests on the mountain surface
         }
     }
 
     // Rotate the stone
-    stone.rotation += 0.1;
+
 }
 
 function handleKeyDown(event) {
     if (event.key === 'ArrowUp') {
-        character.isJumping = true;
+        character.isPushingUp = true;
     }
     if (event.key === 'ArrowLeft') {
         character.isMovingLeft = true;
@@ -219,7 +237,7 @@ function handleKeyDown(event) {
 
 function handleKeyUp(event) {
     if (event.key === 'ArrowUp') {
-        character.isJumping = false;
+        character.isPushingUp = false;
     }
     if (event.key === 'ArrowLeft') {
         character.isMovingLeft = false;
