@@ -7,7 +7,22 @@
     <link rel="stylesheet" href="sisyfos.css">
 </head>
 <body>
-    <canvas id="gameCanvas" width="800" height="600"></canvas>
+    <canvas id="gameCanvas"></canvas>
+    <div id="nameDisplay"></div>
+
+    <!-- On-Screen Controls for Mobile -->
+    <div class="controls">
+        <button id="leftButton">⬅️</button>
+        <button id="upButton">⬆️</button>
+        <button id="rightButton">➡️</button>
+    </div>
+
     <script src="sisyfos.js"></script>
+    <script>
+        // Prompt the user for their name
+        const userName = prompt("Please enter your name:");
+        if (userName) {
+            document.getElementById('nameDisplay').innerText = ` ${userName}'s life!`;
+        }
+    </script>
 </body>
-</html>

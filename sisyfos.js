@@ -1,5 +1,7 @@
+
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
+
 
 const mountain = {
     x: 100,
@@ -9,26 +11,78 @@ const mountain = {
     points: []
 };
 
-// Generate points for a single peak mountain
-function generateMountainPoints() {
-    const numPoints = 10; // Number of points to generate
-    const step = mountain.width / (numPoints - 1);
-    const peakIndex = Math.floor(numPoints / 2);
+function resizeCanvas() {
+    const deviceWidth = window.innerWidth;
+    const deviceHeight = window.innerHeight;
+    const deviceAspectRatio = deviceHeight /deviceWidth;
 
-    mountain.points.push({ x: mountain.x, y: mountain.y });
+    // Define your base aspect ratio (e.g., 4:3)
+    const baseMobileAspectRatio = 3 / 2;
+    const baselaptopAspectRation = 3 / 4;
+    const MobileAspectRatio = 15 / 9;
+    const laptopAspectRatio = 11 / 16;
 
-    for (let i = 1; i < numPoints - 1; i++) {
-        const x = mountain.x + i * step;
-        let y;
-        if (i <= peakIndex) {
-            y = mountain.y - (i / peakIndex) * mountain.height;
-        } else {
-            y = mountain.y - ((numPoints - 1 - i) / peakIndex) * mountain.height;
-        }
-        mountain.points.push({ x, y });
+
+    if (deviceAspectRatio < laptopAspectRatio) {
+        // Device is wider than the base aspect ratio
+        canvas.height = deviceHeight * 0.8;  // Use 80% of device height
+        canvas.width = canvas.height / baselaptopAspectRation; // Adjust width to match aspect ratio
+    } else if (deviceAspectRatio > MobileAspectRatio) {
+        // Device is taller than the base aspect ratio
+        canvas.height = deviceHeight * 0.8;  // Use 80% of device height
+        canvas.width = canvas.height / baseMobileAspectRatio; // Adjust width to match aspect ratio
+    } else {
+        // Device is taller or matches the base aspect ratio
+        canvas.height = deviceHeight * 0.8;  // Use 80% of device height
+        canvas.width = canvas.height; // Adjust width to match aspect ratio
     }
 
-    mountain.points.push({ x: mountain.x + mountain.width, y: mountain.y });
+
+    // Adjust the mountain dimensions based on the new canvas size
+    mountain.width = canvas.width - (0.3 * canvas.width);
+    mountain.height = canvas.height - (0.2 * canvas.height );
+
+    // Regenerate mountain points based on the new dimensions
+    mountain.points = [];  // Clear previous points
+    generateMountainPoints();
+    
+    // Redraw the entire scene after resizing
+    // Optionally, you can also reposition and resize other elements
+}
+
+// Call resizeCanvas when the window is resized
+window.addEventListener('resize', resizeCanvas);
+
+// Initial canvas setup
+resizeCanvas();
+
+
+function generateMountainPoints() {
+    const numPoints = 20;  // Number of points per side (left and right)
+    const peakX = mountain.x + mountain.width / 2; // X coordinate of the peak
+    const peakY = mountain.y - mountain.height;    // Y coordinate of the peak
+
+    // Generate points for the left side
+    for (let i = 0; i <= numPoints; i++) {
+        const t = i / numPoints; // Normalized position along the slope (0 to 1)
+        const x = mountain.x + t * (peakX - mountain.x);
+        const y = mountain.y - t * mountain.height;
+
+        // Add some randomness for curvatures
+        const randomness = Math.random() * (mountain.height / 10) - mountain.height / 50;
+        mountain.points.push({ x, y: y + randomness });
+    }
+
+    // Generate points for the right side
+    for (let i = 0; i <= numPoints; i++) {
+        const t = i / numPoints; // Normalized position along the slope (0 to 1)
+        const x = peakX + t * (mountain.x + mountain.width - peakX);
+        const y = peakY + t * mountain.height;
+
+        // Add some randomness for curvatures
+        const randomness = Math.random() * (mountain.height / 20) - mountain.height / 40;
+        mountain.points.push({ x, y: y + randomness });
+    }
 }
 
 function drawMountain() {
@@ -50,12 +104,11 @@ function drawMountain() {
     ctx.fill();
 }
 
-
 const character = {
     x: mountain.x,
     y: mountain.y,
-    width: 20,
-    height: 40, // Height of the man
+    width: 10,
+    height: 30, // Height of the man
     speed: 2,
     isPushingUp: false,
     isMovingLeft: false,
@@ -69,8 +122,9 @@ const stone = {
     isRollingDown: false
 };
 
-stone.x = character.x + stone.radius *2 + character.width/2; // Place the stone next to the character
-stone.y = getMountainY(stone.x) - 4* stone.radius;  // Place the stone on the mountain's surface
+stone.x = character.x + stone.radius * 2 + character.width / 2; // Place the stone next to the character
+stone.y = getMountainY(stone.x) - 4 * stone.radius;  // Place the stone on the mountain's surface
+
 // Generate random points for the stone
 function generateRandomPoints(radius) {
     const points = [];
@@ -224,45 +278,65 @@ function updateStone() {
 }
 
 function handleKeyDown(event) {
-    if (event.key === 'ArrowUp') {
-        character.isPushingUp = true;
-    }
-    if (event.key === 'ArrowLeft') {
-        character.isMovingLeft = true;
-    }
-    if (event.key === 'ArrowRight') {
-        character.isMovingRight = true;
+    switch (event.key) {
+        case 'ArrowUp':
+            character.isPushingUp = true;
+            break;
+        case 'ArrowLeft':
+            character.isMovingLeft = true;
+            break;
+        case 'ArrowRight':
+            character.isMovingRight = true;
+            if (character.x <= mountain.x + mountain.width / 2) {
+                character.isPushingUp = true;
+            }
+            break;
     }
 }
 
 function handleKeyUp(event) {
-    if (event.key === 'ArrowUp') {
-        character.isPushingUp = false;
-    }
-    if (event.key === 'ArrowLeft') {
-        character.isMovingLeft = false;
-    }
-    if (event.key === 'ArrowRight') {
-        character.isMovingRight = false;
+    switch (event.key) {
+        case 'ArrowUp':
+            character.isPushingUp = false;
+            break;
+        case 'ArrowLeft':
+            character.isMovingLeft = false;
+            break;
+        case 'ArrowRight':
+            character.isMovingRight = false;
+            character.isPushingUp = false;
+            break;
     }
 }
 
-document.addEventListener('keydown', handleKeyDown);
-document.addEventListener('keyup', handleKeyUp);
 
-function clearCanvas() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-}
 
 function gameLoop() {
-    clearCanvas();
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
     drawMountain();
+    updateCharacter();
     drawCharacter();
     drawStone();
-    updateCharacter();
     updateStone();
+
     requestAnimationFrame(gameLoop);
 }
 
-generateMountainPoints();
+window.addEventListener('keydown', handleKeyDown);
+window.addEventListener('keyup', handleKeyUp);
+
+// On-Screen Controls for Mobile
+const upButton = document.getElementById('upButton');
+const leftButton = document.getElementById('leftButton');
+const rightButton = document.getElementById('rightButton');
+
+upButton.addEventListener('touchstart', () => handleKeyDown({ key: 'ArrowUp' }));
+leftButton.addEventListener('touchstart', () => handleKeyDown({ key: 'ArrowLeft' }));
+rightButton.addEventListener('touchstart', () => handleKeyDown({ key: 'ArrowRight' }));
+
+upButton.addEventListener('touchend', () => handleKeyUp({ key: 'ArrowUp' }));
+leftButton.addEventListener('touchend', () => handleKeyUp({ key: 'ArrowLeft' }));
+rightButton.addEventListener('touchend', () => handleKeyUp({ key: 'ArrowRight' }));
+
 gameLoop();

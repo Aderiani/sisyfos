@@ -1,12 +1,70 @@
-body {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
+body, html {
     margin: 0;
-    background-color: #87CEEB; /* Sky blue background */
+    padding: 0;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background-color: #87CEEB; /* Light blue sky color */
 }
 
-canvas {
+#gameCanvas {
+    background-color: #ADD8E6; /* Lighter blue for canvas background */
     border: 1px solid black;
+}
+
+#nameDisplay {
+    position: absolute;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 24px;
+    font-family: Arial, sans-serif;
+    color: #333;
+    background: rgba(255, 255, 255, 0);
+    padding: 5px;
+    border-radius: 5px;
+}
+
+/* On-Screen Controls Styling */
+.controls {
+    display: flex; /* Ensure the controls are always displayed */
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    gap: 10px;
+}
+
+.controls button {
+    width: 60px;
+    height: 60px;
+    font-size: 30px;
+    border: none;
+    border-radius: 5px;
+    background-color: rgba(255, 255, 255, 0.8);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    cursor: pointer;
+}
+
+.controls button:hover {
+    background-color: rgba(255, 255, 255, 1); /* Slightly brighter on hover */
+}
+
+@media (max-width: 768px) {
+    #gameCanvas {
+        width: 90vw;
+        height: 60vh;
+    }
+
+    .controls {
+        gap: 5px; /* Reduce gap between buttons on smaller screens */
+    }
+
+    .controls button {
+        width: 50px; /* Smaller button size for mobile */
+        height: 50px;
+        font-size: 25px;
+    }
 }
