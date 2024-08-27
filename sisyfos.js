@@ -4,7 +4,7 @@ const ctx = canvas.getContext('2d');
 
 
 const mountain = {
-    x: 100,
+    x: 0,
     y: 500,
     width: 600,
     height: 400,
@@ -39,8 +39,8 @@ function resizeCanvas() {
 
 
     // Adjust the mountain dimensions based on the new canvas size
-    mountain.width = canvas.width - (0.3 * canvas.width);
-    mountain.height = canvas.height - (0.2 * canvas.height );
+    mountain.width = canvas.width;
+    mountain.height = canvas.height - (0.25 * canvas.height );
 
     // Regenerate mountain points based on the new dimensions
     mountain.points = [];  // Clear previous points
@@ -122,7 +122,7 @@ const stone = {
     isRollingDown: false
 };
 
-stone.x = character.x + stone.radius * 2 + character.width / 2; // Place the stone next to the character
+stone.x = character.x + stone.radius  + character.width / 2; // Place the stone next to the character
 stone.y = getMountainY(stone.x) - 4 * stone.radius;  // Place the stone on the mountain's surface
 
 // Generate random points for the stone
