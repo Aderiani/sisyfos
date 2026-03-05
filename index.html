@@ -9,20 +9,25 @@
 <body>
     <canvas id="gameCanvas"></canvas>
     <div id="nameDisplay"></div>
+    <div id="hud">
+        <span id="scoreDisplay">Score: 0</span>
+        <span id="attemptsDisplay">Attempts: 0</span>
+        <span id="statusDisplay">Push the stone uphill</span>
+    </div>
 
-    <!-- On-Screen Controls for Mobile -->
     <div class="controls">
-        <button id="leftButton">⬅️</button>
-        <button id="upButton">⬆️</button>
-        <button id="rightButton">➡️</button>
+        <button id="leftButton" aria-label="Move left">⬅️</button>
+        <button id="upButton" aria-label="Push up">⬆️</button>
+        <button id="rightButton" aria-label="Move right">➡️</button>
+        <button id="restartButton" aria-label="Restart game">↺</button>
     </div>
 
     <script src="sisyfos.js"></script>
     <script>
-        // Prompt the user for their name
         const userName = prompt("Please enter your name:");
         if (userName) {
-            document.getElementById('nameDisplay').innerText = ` ${userName}'s life!`;
+            document.getElementById('nameDisplay').innerText = `${userName}'s life!`;
         }
     </script>
 </body>
+</html>

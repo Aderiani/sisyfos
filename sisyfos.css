@@ -1,4 +1,5 @@
-body, html {
+body,
+html {
     margin: 0;
     padding: 0;
     height: 100%;
@@ -6,12 +7,15 @@ body, html {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    background-color: #87CEEB; /* Light blue sky color */
+    background-color: #87ceeb;
+    overflow: hidden;
 }
 
 #gameCanvas {
-    background-color: #ADD8E6; /* Lighter blue for canvas background */
-    border: 1px solid black;
+    background-color: #add8e6;
+    border: 1px solid #000;
+    max-width: 96vw;
+    max-height: 82vh;
 }
 
 #nameDisplay {
@@ -22,14 +26,28 @@ body, html {
     font-size: 24px;
     font-family: Arial, sans-serif;
     color: #333;
-    background: rgba(255, 255, 255, 0);
     padding: 5px;
     border-radius: 5px;
+    pointer-events: none;
 }
 
-/* On-Screen Controls Styling */
+#hud {
+    position: absolute;
+    top: 44px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 16px;
+    font-family: Arial, sans-serif;
+    font-size: 16px;
+    color: #1f2937;
+    background: rgba(255, 255, 255, 0.55);
+    padding: 6px 10px;
+    border-radius: 8px;
+}
+
 .controls {
-    display: flex; /* Ensure the controls are always displayed */
+    display: flex;
     position: absolute;
     bottom: 20px;
     left: 50%;
@@ -40,31 +58,35 @@ body, html {
 .controls button {
     width: 60px;
     height: 60px;
-    font-size: 30px;
+    font-size: 28px;
     border: none;
-    border-radius: 5px;
-    background-color: rgba(255, 255, 255, 0.8);
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+    background-color: rgba(255, 255, 255, 0.88);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.22);
     cursor: pointer;
 }
 
-.controls button:hover {
-    background-color: rgba(255, 255, 255, 1); /* Slightly brighter on hover */
+.controls button:active {
+    transform: translateY(1px);
 }
 
 @media (max-width: 768px) {
-    #gameCanvas {
-        width: 90vw;
-        height: 60vh;
+    #nameDisplay {
+        font-size: 20px;
+    }
+
+    #hud {
+        font-size: 14px;
+        gap: 10px;
     }
 
     .controls {
-        gap: 5px; /* Reduce gap between buttons on smaller screens */
+        gap: 6px;
     }
 
     .controls button {
-        width: 50px; /* Smaller button size for mobile */
-        height: 50px;
-        font-size: 25px;
+        width: 52px;
+        height: 52px;
+        font-size: 24px;
     }
 }

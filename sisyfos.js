@@ -1,95 +1,181 @@
-
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
+const scoreDisplay = document.getElementById('scoreDisplay');
+const attemptsDisplay = document.getElementById('attemptsDisplay');
+const statusDisplay = document.getElementById('statusDisplay');
 
 const mountain = {
     x: 0,
-    y: 500,
+    y: 0,
     width: 600,
     height: 400,
     points: []
 };
 
-function resizeCanvas() {
-    const deviceWidth = window.innerWidth;
-    const deviceHeight = window.innerHeight;
-    const deviceAspectRatio = deviceHeight /deviceWidth;
+const character = {
+    x: 0,
+    y: 0,
+    width: 12,
+    height: 30,
+    speed: 3,
+    stepPhase: 0,
+    isPushingUp: false,
+    isMovingLeft: false,
+    isMovingRight: false
+};
 
-    // Define your base aspect ratio (e.g., 4:3)
-    const baseMobileAspectRatio = 3 / 2;
-    const baselaptopAspectRation = 3 / 4;
-    const MobileAspectRatio = 15 / 9;
-    const laptopAspectRatio = 11 / 16;
+const stone = {
+    radius: 20,
+    x: 0,
+    y: 0,
+    rotation: 0,
+    points: [],
+    isRollingDown: false
+};
 
+const gameState = {
+    attempts: 0,
+    score: 0,
+    reachedPeak: false
+};
 
-    if (deviceAspectRatio < laptopAspectRatio) {
-        // Device is wider than the base aspect ratio
-        canvas.height = deviceHeight * 0.8;  // Use 80% of device height
-        canvas.width = canvas.height / baselaptopAspectRation; // Adjust width to match aspect ratio
-    } else if (deviceAspectRatio > MobileAspectRatio) {
-        // Device is taller than the base aspect ratio
-        canvas.height = deviceHeight * 0.8;  // Use 80% of device height
-        canvas.width = canvas.height / baseMobileAspectRatio; // Adjust width to match aspect ratio
-    } else {
-        // Device is taller or matches the base aspect ratio
-        canvas.height = deviceHeight * 0.8;  // Use 80% of device height
-        canvas.width = canvas.height; // Adjust width to match aspect ratio
-    }
-
-
-    // Adjust the mountain dimensions based on the new canvas size
-    mountain.width = canvas.width;
-    mountain.height = canvas.height - (0.25 * canvas.height );
-
-    // Regenerate mountain points based on the new dimensions
-    mountain.points = [];  // Clear previous points
-    generateMountainPoints();
-    
-    // Redraw the entire scene after resizing
-    // Optionally, you can also reposition and resize other elements
+function clamp(value, min, max) {
+    return Math.max(min, Math.min(max, value));
 }
 
-// Call resizeCanvas when the window is resized
-window.addEventListener('resize', resizeCanvas);
-
-// Initial canvas setup
-resizeCanvas();
-
-
 function generateMountainPoints() {
-    const numPoints = 20;  // Number of points per side (left and right)
-    const peakX = mountain.x + mountain.width / 2; // X coordinate of the peak
-    const peakY = mountain.y - mountain.height;    // Y coordinate of the peak
+    mountain.points = [];
+    const numPoints = 20;
+    const peakX = mountain.x + mountain.width / 2;
+    const peakY = mountain.y - mountain.height;
 
-    // Generate points for the left side
     for (let i = 0; i <= numPoints; i++) {
-        const t = i / numPoints; // Normalized position along the slope (0 to 1)
+        const t = i / numPoints;
         const x = mountain.x + t * (peakX - mountain.x);
         const y = mountain.y - t * mountain.height;
-
-        // Add some randomness for curvatures
         const randomness = Math.random() * (mountain.height / 10) - mountain.height / 50;
         mountain.points.push({ x, y: y + randomness });
     }
 
-    // Generate points for the right side
     for (let i = 0; i <= numPoints; i++) {
-        const t = i / numPoints; // Normalized position along the slope (0 to 1)
+        const t = i / numPoints;
         const x = peakX + t * (mountain.x + mountain.width - peakX);
         const y = peakY + t * mountain.height;
-
-        // Add some randomness for curvatures
         const randomness = Math.random() * (mountain.height / 20) - mountain.height / 40;
         mountain.points.push({ x, y: y + randomness });
     }
 }
 
-function drawMountain() {
-    if (mountain.points.length === 0) {
-        generateMountainPoints();
+function getMountainY(x) {
+    const clampedX = clamp(x, mountain.x, mountain.x + mountain.width);
+
+    for (let i = 0; i < mountain.points.length - 1; i++) {
+        const p1 = mountain.points[i];
+        const p2 = mountain.points[i + 1];
+        if (clampedX >= p1.x && clampedX <= p2.x) {
+            const slope = (p2.y - p1.y) / (p2.x - p1.x);
+            return p1.y + slope * (clampedX - p1.x);
+        }
     }
 
+    return mountain.y;
+}
+
+function generateRandomPoints(radius) {
+    const points = [];
+    const numPoints = 8 + Math.floor(Math.random() * 5);
+
+    for (let i = 0; i < numPoints; i++) {
+        const angle = (i / numPoints) * 2 * Math.PI;
+        const radiusVariation = radius * 0.3 * Math.random();
+        const pointRadius = radius + radiusVariation;
+        points.push({
+            x: pointRadius * Math.cos(angle),
+            y: pointRadius * Math.sin(angle)
+        });
+    }
+
+    return points;
+}
+
+function updateHud() {
+    scoreDisplay.textContent = `Score: ${gameState.score}`;
+    attemptsDisplay.textContent = `Attempts: ${gameState.attempts}`;
+    if (stone.isRollingDown) {
+        statusDisplay.textContent = 'The stone is rolling down...';
+    } else if (gameState.reachedPeak) {
+        statusDisplay.textContent = 'You reached the peak. Start again.';
+    } else {
+        statusDisplay.textContent = 'Push the stone uphill';
+    }
+}
+
+function resetRound(incrementAttempts = false) {
+    if (incrementAttempts) {
+        gameState.attempts += 1;
+    }
+
+    character.x = mountain.x + mountain.width * 0.08;
+    character.y = getMountainY(character.x + character.width / 2);
+    character.stepPhase = 0;
+
+    stone.x = character.x + stone.radius + character.width;
+    stone.y = getMountainY(stone.x) - stone.radius;
+    stone.rotation = 0;
+    stone.isRollingDown = false;
+    gameState.reachedPeak = false;
+
+    updateHud();
+}
+
+function resizeCanvas() {
+    const oldWidth = canvas.width || 1;
+    const oldCharacterRatio = character.x / oldWidth;
+    const oldStoneRatio = stone.x / oldWidth;
+
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    const targetHeight = Math.floor(viewportHeight * 0.8);
+
+    let targetWidth;
+    const deviceAspectRatio = viewportHeight / viewportWidth;
+    const mobileAspectRatio = 15 / 9;
+    const laptopAspectRatio = 11 / 16;
+
+    if (deviceAspectRatio < laptopAspectRatio) {
+        targetWidth = Math.floor(targetHeight / (3 / 4));
+    } else if (deviceAspectRatio > mobileAspectRatio) {
+        targetWidth = Math.floor(targetHeight / (3 / 2));
+    } else {
+        targetWidth = targetHeight;
+    }
+
+    targetWidth = Math.min(targetWidth, Math.floor(viewportWidth * 0.96));
+
+    canvas.width = targetWidth;
+    canvas.height = targetHeight;
+
+    mountain.x = 0;
+    mountain.y = canvas.height;
+    mountain.width = canvas.width;
+    mountain.height = canvas.height * 0.75;
+    generateMountainPoints();
+
+    if (stone.points.length === 0) {
+        stone.points = generateRandomPoints(stone.radius);
+        resetRound(false);
+        return;
+    }
+
+    character.x = clamp(oldCharacterRatio * canvas.width, mountain.x, mountain.x + mountain.width - character.width);
+    character.y = getMountainY(character.x + character.width / 2);
+
+    stone.x = clamp(oldStoneRatio * canvas.width, mountain.x + stone.radius, mountain.x + mountain.width - stone.radius);
+    stone.y = getMountainY(stone.x) - stone.radius;
+}
+
+function drawMountain() {
     ctx.beginPath();
     ctx.moveTo(mountain.points[0].x, mountain.points[0].y);
 
@@ -100,121 +186,112 @@ function drawMountain() {
     ctx.lineTo(mountain.x + mountain.width, canvas.height);
     ctx.lineTo(mountain.x, canvas.height);
     ctx.closePath();
-    ctx.fillStyle = '#8B4513'; // Brown color for mountain
+    ctx.fillStyle = '#8b4513';
     ctx.fill();
 }
-
-const character = {
-    x: mountain.x,
-    y: mountain.y,
-    width: 10,
-    height: 30, // Height of the man
-    speed: 2,
-    isPushingUp: false,
-    isMovingLeft: false,
-    isMovingRight: false
-};
-
-const stone = {
-    radius: 20,
-    rotation: 0,
-    points: [],
-    isRollingDown: false
-};
-
-stone.x = character.x + stone.radius  + character.width / 2; // Place the stone next to the character
-stone.y = getMountainY(stone.x) - 4 * stone.radius;  // Place the stone on the mountain's surface
-
-// Generate random points for the stone
-function generateRandomPoints(radius) {
-    const points = [];
-    const numPoints = 8 + Math.floor(Math.random() * 5); // Random number of points (8-12)
-
-    for (let i = 0; i < numPoints; i++) {
-        const angle = (i / numPoints) * 2 * Math.PI; // Evenly spaced angles
-        const radiusVariation = radius * 0.3 * Math.random(); // Random variation in radius
-        const pointRadius = radius + radiusVariation;
-        const x = pointRadius * Math.cos(angle);
-        const y = pointRadius * Math.sin(angle);
-        points.push({ x, y });
-    }
-
-    return points;
-}
-
-// Initialize stone points
-stone.points = generateRandomPoints(stone.radius);
 
 function drawCharacter() {
-    // Draw the body
-    ctx.fillStyle = '#FF0000'; // Red color for character
-    ctx.fillRect(character.x, character.y - character.height, character.width, character.height);
+    const centerX = character.x + character.width / 2;
+    const footY = character.y;
+    const hipY = footY - 16;
+    const shoulderY = hipY - 16;
+    const lean = character.isPushingUp ? 5 : 2;
+    const torsoTopX = centerX + lean;
+    const isActive = character.isPushingUp || character.isMovingLeft || character.isMovingRight;
+    const swing = Math.sin(character.stepPhase) * (character.isPushingUp ? 4 : 3);
+    const armSwing = isActive ? swing : 0;
+    const leftFootX = centerX - 3 + armSwing * 0.55;
+    const rightFootX = centerX + 3 - armSwing * 0.55;
+    const leftHandX = centerX + 8 - armSwing;
+    const rightHandX = centerX + 12 + armSwing;
 
-    // Draw the head
+    ctx.save();
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    // Legs
+    ctx.strokeStyle = '#2f3c4d';
+    ctx.lineWidth = 4;
     ctx.beginPath();
-    ctx.arc(character.x + character.width / 2, character.y - character.height - 10, 10, 0, Math.PI * 2);
-    ctx.fillStyle = '#FF0000';
+    ctx.moveTo(leftFootX, footY);
+    ctx.lineTo(centerX - 2, hipY);
+    ctx.moveTo(rightFootX, footY);
+    ctx.lineTo(centerX + 2, hipY);
+    ctx.stroke();
+
+    // Torso (tunic)
+    ctx.fillStyle = '#9b2c2c';
+    ctx.beginPath();
+    ctx.moveTo(centerX - 6, hipY);
+    ctx.lineTo(torsoTopX - 7, shoulderY);
+    ctx.lineTo(torsoTopX + 6, shoulderY);
+    ctx.lineTo(centerX + 6, hipY);
+    ctx.closePath();
     ctx.fill();
+
+    // Arms
+    ctx.strokeStyle = '#f1c27d';
+    ctx.lineWidth = 3.5;
+    ctx.beginPath();
+    ctx.moveTo(torsoTopX - 5, shoulderY + 2);
+    ctx.lineTo(leftHandX, shoulderY + 6);
+    ctx.moveTo(torsoTopX + 5, shoulderY + 2);
+    ctx.lineTo(rightHandX, shoulderY + 10);
+    ctx.stroke();
+
+    // Head
+    ctx.fillStyle = '#f1c27d';
+    ctx.beginPath();
+    ctx.arc(torsoTopX, shoulderY - 9, 6.8, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Hair
+    ctx.fillStyle = '#3d2b1f';
+    ctx.beginPath();
+    ctx.arc(torsoTopX - 1, shoulderY - 11, 4.3, Math.PI, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
 }
 
 function drawStone() {
-    // Draw the rotating semi-circular stone on the mountain
     ctx.save();
     ctx.translate(stone.x, stone.y);
     ctx.rotate(stone.rotation);
+
     ctx.beginPath();
     const firstPoint = stone.points[0];
     ctx.moveTo(firstPoint.x, firstPoint.y);
 
-    // Create the stone shape using bezier curves
     for (let i = 1; i < stone.points.length; i++) {
-        const currentPoint = stone.points[i];
-        const nextPoint = stone.points[(i + 1) % stone.points.length];
-        const controlX = (currentPoint.x + nextPoint.x) / 2;
-        const controlY = (currentPoint.y + nextPoint.y) / 2;
-        ctx.quadraticCurveTo(currentPoint.x, currentPoint.y, controlX, controlY);
+        const current = stone.points[i];
+        const next = stone.points[(i + 1) % stone.points.length];
+        const controlX = (current.x + next.x) / 2;
+        const controlY = (current.y + next.y) / 2;
+        ctx.quadraticCurveTo(current.x, current.y, controlX, controlY);
     }
-    ctx.closePath();
 
-    // Fill and stroke the shape
+    ctx.closePath();
     ctx.fillStyle = 'gray';
     ctx.fill();
     ctx.strokeStyle = 'gray';
     ctx.stroke();
 
-    // Restore the canvas state
     ctx.restore();
 }
 
-function getMountainY(x) {
-    for (let i = 0; i < mountain.points.length - 1; i++) {
-        const p1 = mountain.points[i];
-        const p2 = mountain.points[i + 1];
-        if (x >= p1.x && x <= p2.x) {
-            const slope = (p2.y - p1.y) / (p2.x - p1.x);
-            return p1.y + slope * (x - p1.x);
-        }
-    }
-    return mountain.y;
-}
-
 function updateCharacter() {
+    const centerX = mountain.x + mountain.width / 2;
+    const isActive = character.isPushingUp || character.isMovingLeft || character.isMovingRight;
+
+    if (isActive) {
+        character.stepPhase += 0.24;
+    }
+
     if (character.isPushingUp) {
-        character.y -= character.speed;
-        character.x += character.speed / 2;
-        if (character.y <= mountain.y - mountain.height) {
-            character.isPushingUp = false;
-        }
+        character.x += character.speed * 0.5;
     } else {
-        character.y += character.speed;
-        if (character.x > mountain.x + mountain.width / 2) {
-            character.x += character.speed / 2;
-        } else {
-            character.x -= character.speed / 2;
-        }
-        if (character.y >= mountain.y) {
-            character.y = mountain.y;
-        }
+        character.x += character.x > centerX ? character.speed * 0.5 : -character.speed * 0.5;
     }
 
     if (character.isMovingLeft) {
@@ -225,118 +302,115 @@ function updateCharacter() {
         character.x += character.speed;
     }
 
-    // Ensure the character does not pass the mountain lines
-    if (character.x < mountain.x) {
-        character.x = mountain.x;
-    }
-    if (character.x + character.width > mountain.x + mountain.width) {
-        character.x = mountain.x + mountain.width - character.width;
-    }
-
-    // Ensure the character stays on the mountain line
+    character.x = clamp(character.x, mountain.x, mountain.x + mountain.width - character.width);
     character.y = getMountainY(character.x + character.width / 2);
 }
 
 function updateStone() {
-    // Stone should only move when character is pushing it
-    const mountainSurfaceY = getMountainY(stone.x) - stone.radius;
-    if (stone.y < mountainSurfaceY) {
-        stone.y = mountainSurfaceY;
-    }
+    const canPushStone = !stone.isRollingDown && character.isPushingUp;
+    const touchDistance = stone.radius + character.width;
+    const isTouchingStone = stone.x > character.x && stone.x - character.x < touchDistance;
 
-    if (!stone.isRollingDown && character.isPushingUp && stone.x - character.x < stone.radius + character.width  && stone.x > character.x ) {
-        // const newY = stone.y - character.speed;
+    if (canPushStone && isTouchingStone) {
         stone.rotation += 0.1;
-        stone.x = character.x + stone.radius + character.width ;
-        stone.y = getMountainY(stone.x) - stone.radius; // Place the stone on the mountain's surface
-        if (stone.x > mountain.x + mountain.width / 2) {
-            stone.isRollingDown = true; // Start rolling down when reaching the peak
+        stone.x = character.x + stone.radius + character.width;
+        stone.x = clamp(stone.x, mountain.x + stone.radius, mountain.x + mountain.width - stone.radius);
+        stone.y = getMountainY(stone.x) - stone.radius;
+
+        if (stone.x >= mountain.x + mountain.width / 2) {
+            stone.isRollingDown = true;
+            gameState.reachedPeak = true;
+            updateHud();
         }
     }
 
-    // If the stone starts rolling down automatically
     if (stone.isRollingDown) {
         stone.x += character.speed;
+        stone.x = clamp(stone.x, mountain.x + stone.radius, mountain.x + mountain.width - stone.radius);
+        stone.y = getMountainY(stone.x) - stone.radius;
         stone.rotation += 0.1;
-        // Prevent the stone from going inside the mountain
-        if (stone.y < mountainSurfaceY) {
-            stone.y = mountainSurfaceY;
-        } {
-            stone.y += character.speed; // Stone rolls down
-        }
 
-        if (stone.x >= mountain.x + mountain.width) {
-            // Reset the stone to the starting position
-            stone.isRollingDown = false; // Stop rolling
-            stone.x = mountain.x + stone.radius *2; // Place the stone next to the character
-            stone.y = getMountainY(stone.x) - stone.radius; // Ensure it rests on the mountain surface
+        if (stone.x >= mountain.x + mountain.width - stone.radius) {
+            gameState.score += 1;
+            resetRound(true);
         }
     }
-
-    // Rotate the stone
-
 }
 
 function handleKeyDown(event) {
-    switch (event.key) {
-        case 'ArrowUp':
+    if (event.key === 'ArrowUp') {
+        character.isPushingUp = true;
+    }
+    if (event.key === 'ArrowLeft') {
+        character.isMovingLeft = true;
+    }
+    if (event.key === 'ArrowRight') {
+        character.isMovingRight = true;
+        if (character.x <= mountain.x + mountain.width / 2) {
             character.isPushingUp = true;
-            break;
-        case 'ArrowLeft':
-            character.isMovingLeft = true;
-            break;
-        case 'ArrowRight':
-            character.isMovingRight = true;
-            if (character.x <= mountain.x + mountain.width / 2) {
-                character.isPushingUp = true;
-            }
-            break;
+        }
     }
 }
 
 function handleKeyUp(event) {
-    switch (event.key) {
-        case 'ArrowUp':
-            character.isPushingUp = false;
-            break;
-        case 'ArrowLeft':
-            character.isMovingLeft = false;
-            break;
-        case 'ArrowRight':
-            character.isMovingRight = false;
-            character.isPushingUp = false;
-            break;
+    if (event.key === 'ArrowUp') {
+        character.isPushingUp = false;
+    }
+    if (event.key === 'ArrowLeft') {
+        character.isMovingLeft = false;
+    }
+    if (event.key === 'ArrowRight') {
+        character.isMovingRight = false;
+        character.isPushingUp = false;
     }
 }
 
+function bindPressControl(button, key) {
+    const start = (event) => {
+        event.preventDefault();
+        handleKeyDown({ key });
+    };
+    const end = (event) => {
+        event.preventDefault();
+        handleKeyUp({ key });
+    };
 
+    button.addEventListener('touchstart', start, { passive: false });
+    button.addEventListener('touchend', end, { passive: false });
+    button.addEventListener('touchcancel', end, { passive: false });
+
+    button.addEventListener('mousedown', start);
+    button.addEventListener('mouseup', end);
+    button.addEventListener('mouseleave', end);
+}
 
 function gameLoop() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     drawMountain();
     updateCharacter();
+    updateStone();
     drawCharacter();
     drawStone();
-    updateStone();
 
     requestAnimationFrame(gameLoop);
 }
 
 window.addEventListener('keydown', handleKeyDown);
 window.addEventListener('keyup', handleKeyUp);
+window.addEventListener('resize', resizeCanvas);
 
-// On-Screen Controls for Mobile
 const upButton = document.getElementById('upButton');
 const leftButton = document.getElementById('leftButton');
 const rightButton = document.getElementById('rightButton');
+const restartButton = document.getElementById('restartButton');
 
-upButton.addEventListener('touchstart', () => handleKeyDown({ key: 'ArrowUp' }));
-leftButton.addEventListener('touchstart', () => handleKeyDown({ key: 'ArrowLeft' }));
-rightButton.addEventListener('touchstart', () => handleKeyDown({ key: 'ArrowRight' }));
+bindPressControl(upButton, 'ArrowUp');
+bindPressControl(leftButton, 'ArrowLeft');
+bindPressControl(rightButton, 'ArrowRight');
+restartButton.addEventListener('click', () => resetRound(true));
 
-upButton.addEventListener('touchend', () => handleKeyUp({ key: 'ArrowUp' }));
-leftButton.addEventListener('touchend', () => handleKeyUp({ key: 'ArrowLeft' }));
-rightButton.addEventListener('touchend', () => handleKeyUp({ key: 'ArrowRight' }));
-
+stone.points = generateRandomPoints(stone.radius);
+resizeCanvas();
+updateHud();
 gameLoop();
