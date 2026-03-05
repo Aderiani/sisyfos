@@ -2,7 +2,6 @@ const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
 const scoreDisplay = document.getElementById('scoreDisplay');
-const attemptsDisplay = document.getElementById('attemptsDisplay');
 const statusDisplay = document.getElementById('statusDisplay');
 
 const mountain = {
@@ -35,7 +34,6 @@ const stone = {
 };
 
 const gameState = {
-    attempts: 0,
     score: 0,
     reachedPeak: false
 };
@@ -101,7 +99,6 @@ function generateRandomPoints(radius) {
 
 function updateHud() {
     scoreDisplay.textContent = `Score: ${gameState.score}`;
-    attemptsDisplay.textContent = `Attempts: ${gameState.attempts}`;
     if (stone.isRollingDown) {
         statusDisplay.textContent = 'The stone is rolling down...';
     } else if (gameState.reachedPeak) {
@@ -111,11 +108,7 @@ function updateHud() {
     }
 }
 
-function resetRound(incrementAttempts = false) {
-    if (incrementAttempts) {
-        gameState.attempts += 1;
-    }
-
+function resetRound() {
     character.x = mountain.x + mountain.width * 0.08;
     character.y = getMountainY(character.x + character.width / 2);
     character.stepPhase = 0;
@@ -164,7 +157,7 @@ function resizeCanvas() {
 
     if (stone.points.length === 0) {
         stone.points = generateRandomPoints(stone.radius);
-        resetRound(false);
+        resetRound();
         return;
     }
 
@@ -332,7 +325,7 @@ function updateStone() {
 
         if (stone.x >= mountain.x + mountain.width - stone.radius) {
             gameState.score += 1;
-            resetRound(true);
+            resetRound();
         }
     }
 }
@@ -408,7 +401,7 @@ const restartButton = document.getElementById('restartButton');
 bindPressControl(upButton, 'ArrowUp');
 bindPressControl(leftButton, 'ArrowLeft');
 bindPressControl(rightButton, 'ArrowRight');
-restartButton.addEventListener('click', () => resetRound(true));
+restartButton.addEventListener('click', () => resetRound());
 
 stone.points = generateRandomPoints(stone.radius);
 resizeCanvas();
